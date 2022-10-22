@@ -1,0 +1,11 @@
+[all:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+ansible_python_interpreter=/usr/bin/python3
+
+
+[prodNetbox]
+client1 ansible_host=172.10.20.31
+
+[prodLibre]
+client2 ansible_host=172.10.20.32
+

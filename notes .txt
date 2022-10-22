@@ -1,0 +1,4 @@
+
+ ansible-galaxy init deployNetbox
+ ansible-playbook -i hosts deployNetbox.yml 
+ keyGithub: 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

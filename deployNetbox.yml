@@ -1,0 +1,13 @@
+---
+- name: install postgresql
+  hosts: prodNetbox
+  gather_facts: true
+  become: true  
+  vars:
+    db_user: netbox
+    db_name: netbox
+    db_password: 'J5brHrAXFLQSif0K'
+    #allow_world_readable_tmpfiles: true
+    #ansible_sudo_pass: vagrant	
+  roles:
+   - role: deployNetbox

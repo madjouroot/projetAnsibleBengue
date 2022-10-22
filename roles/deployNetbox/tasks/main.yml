@@ -1,0 +1,92 @@
+---
+# tasks file for deployNetbox
+- name: install postgreSQL
+  package:  
+    name: "{{ item }}" 
+    update_cache: true 
+    state: latest
+  when: ansible_distribution== "Ubuntu"
+  loop:
+    - acl
+    - postgresql
+    - postgresql-contrib
+    - libpq-dev
+    - python3-psycopg2
+
+- name: Ensure the PostgreSQL service is running
+  service: name=postgresql state=started enabled=yes
+
+- name: Check the version of installed postgres
+  register: psqlVersion 
+  command: "psql -V" 
+- debug:
+    var: psqlVersion.stdout
+- name: Create the database
+  become: true
+  become_user: postgres
+  postgresql_db: 
+    name: "{{ db_name }}" 
+    template: template0
+    state: present
+- name: Create postgres user for my app
+  become: true
+  become_user: postgres
+  postgresql_user:
+    name: "{{db_user}}"
+    password: "{{db_password}}"
+    state: present
+
+- name: GRANT ALL PRIVILEGES ON DATABASE netbox TO netbox
+  become: true
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ db_name }}"
+    type: database
+    role: "{{db_user}}"
+    privs: ALL
+
+- name: Ensure user has access to the new database
+  become: true
+  become_user: postgres
+  postgresql_user: 
+    db: "{{ db_name }}" 
+    name: "{{db_user}}"  
+    password: "{{db_password}}" 
+    priv: ALL 
+    state: present
+
+- name: install Redis
+  package:  
+    name: redis-server
+    update_cache: true 
+    state: latest
+
+- name: Check the version of installed Redis and the service status
+  command: "redis-server -v"
+  register: RedisVersion  
+- debug:
+    var: RedisVersion.stdout
+- name:  the service status of Redis 
+  command: "redis-cli ping"
+  register: VerifyServiceStatus  
+- debug:
+    var: VerifyServiceStatus.stdout
+  
+  
+     
+
+
+
+
+
+
+
+
+
+
+# - name: Ensure user does not have unnecessary permissions
+#   become: true
+#   become_user: postgres
+#   postgresql_user: name={{ db_user }} role_attr_flags=NOSUPERUSER,NOCREATEDB state=present
+
+
