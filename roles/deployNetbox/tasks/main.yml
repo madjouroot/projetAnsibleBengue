@@ -71,9 +71,38 @@
   register: VerifyServiceStatus  
 - debug:
     var: VerifyServiceStatus.stdout
+
+- name: install of Netbox
+  package:  
+    name: "{{ item }}" 
+    update_cache: true 
+    state: latest
+  when: ansible_distribution== "Ubuntu"
+  loop:
+    - python3
+    - python3-pip
+    - python3-venv
+    - python3-dev
+    - build-essential
+    - libxml2-dev 
+    - libxslt1-dev 
+    - libffi-dev 
+    - libpq-dev 
+    - libssl-dev 
+    - zlib1g-dev
+- name: Check if Netbox is installed
+  command: "python3 -V"
+  register: pythonVersion  
+- debug:
+    var: pythonVersion.stdout 
+- name: Creates Netbox directory 
+  file:
+    path: /opt/netbox
+    state: directory
   
-  
-     
+- name: Go to the folder Netbox
+  command: chdir=/opt/netbox/   
+  tags: netbox
 
 
 
