@@ -21,6 +21,7 @@
   command: "psql -V" 
 - debug:
     var: psqlVersion.stdout
+
 - name: Create the database
   become: true
   become_user: postgres
@@ -28,6 +29,7 @@
     name: "{{ db_name }}" 
     template: template0
     state: present
+
 - name: Create postgres user for my app
   become: true
   become_user: postgres
@@ -66,6 +68,7 @@
   register: RedisVersion  
 - debug:
     var: RedisVersion.stdout
+
 - name:  the service status of Redis 
   command: "redis-cli ping"
   register: VerifyServiceStatus  
@@ -90,19 +93,114 @@
     - libpq-dev 
     - libssl-dev 
     - zlib1g-dev
-- name: Check if Netbox is installed
+
+- name: Check if python is installed
   command: "python3 -V"
   register: pythonVersion  
 - debug:
     var: pythonVersion.stdout 
+    
 - name: Creates Netbox directory 
   file:
     path: /opt/netbox
     state: directory
+  become: true 
   
-- name: Go to the folder Netbox
-  command: chdir=/opt/netbox/   
-  tags: netbox
+- name: clone Netbox
+  git:
+    repo: 'https://github.com/netbox-community/netbox.git'
+    dest: /opt/netbox/
+    force: yes 
+
+- name: Create a Group
+  group:
+    name: netbox
+    state: present
+
+- name: Assign the netbox user to the group netbox
+  user:
+    name: netbox
+    group: netbox
+
+- name: Changing ownership
+  command: "chown -R netbox /opt/netbox/netbox/media/" 
+  become: true 
+
+- name: copy file
+  copy:
+    src: /opt/netbox/netbox/netbox/configuration_example.py
+    dest: /opt/netbox/netbox/netbox/configuration.py
+    remote_src: yes
+  become: true 
+  #tags: tes
+
+# - name: command shell
+#   command: "sed -i 's/\'USER\'\: \'\'/\'USER\'\: \'netbox\'/' /opt/netbox/netbox/netbox/configuration.py"
+#   become: true 
+#   tags: tes
+  #sudo sed -i 's/\#ChallengeResponseAuthentication no/ChallengeResponseAuthentication yes/g' /etc/ssh/sshd_config
+
+- name: configuration file
+  lineinfile:
+    path: /opt/netbox/netbox/netbox/configuration.py
+    regexp: '^ALLOWED_HOSTS'
+    line: ALLOWED_HOSTS = ['*****']
+    #insertafter: '# Example: ALLOWED_HOSTS'
+    state: present
+    #backup: yes
+  become: true 
+  #tags: tes
+
+
+- name: configuration Database for user
+  lineinfile:
+    path: /opt/netbox/netbox/netbox/configuration.py
+    regexp: '(^[^$]{4}\WUSER\W)'                                                                     #\s*\s*# PostgreSQL username                 #'^\s*USER\s*'
+    line: "\\1:'{{db_user}}',          # PostgreSQL username"   
+    #insertafter: '^DATABASE'
+    backrefs: yes
+    state: present
+    firstmatch: yes
+    #backup: yes
+  become: true 
+  #tags: tes2
+  
+- name: configuration Database for password 
+  lineinfile:
+    path: /opt/netbox/netbox/netbox/configuration.py
+    regexp: '(^[^$]{4}\WPASSWORD\W)'                                                                            
+    line: "\\1:'{{db_password}}',          # PostgreSQL username"   
+    #insertafter: '^DATABASE'
+    backrefs: yes
+    state: present
+    firstmatch: yes
+    #backup: yes
+  become: true 
+  #tags: tes3
+
+
+# - name: Configuration of netbox
+#   lineinfile:
+#     path: /opt/netbox/netbox/netbox/configuration.py
+#     regexp: "{{ item.regexp }}"
+#     line: "{{ item.line }}"
+#   with_items:
+#     - { regexp: "^ALLOWED_HOSTS", line: "ALLOWED_HOSTS = ['*']" }
+#     - { regexp: "^DATABASE", line: "DATABASE = {'USER':'{{db_user}}',"}
+#     - { regexp: "^DATABASE", line: "DATABASE = {'PASSWORD':'{{db_password}}',"}
+#   become: true 
+#   tags: tes
+
+
+  
+  
+                              #   command: ls
+                              #   command: ls
+                              #   args: 
+                              # - name: Go to the folder Netbox1
+                              #     chdir: /opt/netbox/   
+
+
 
 
 
