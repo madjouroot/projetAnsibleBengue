@@ -94,6 +94,10 @@
     - libssl-dev 
     - zlib1g-dev
 
+- name: Install pexpect
+  pip:
+   name: pexpect
+
 - name: Check if python is installed
   command: "python3 -V"
   register: pythonVersion  
@@ -132,32 +136,35 @@
     dest: /opt/netbox/netbox/netbox/configuration.py
     remote_src: yes
   become: true 
-  #tags: tes
-
-# - name: command shell
-#   command: "sed -i 's/\'USER\'\: \'\'/\'USER\'\: \'netbox\'/' /opt/netbox/netbox/netbox/configuration.py"
-#   become: true 
-#   tags: tes
-  #sudo sed -i 's/\#ChallengeResponseAuthentication no/ChallengeResponseAuthentication yes/g' /etc/ssh/sshd_config
-
+  
 - name: configuration file
   lineinfile:
     path: /opt/netbox/netbox/netbox/configuration.py
     regexp: '^ALLOWED_HOSTS'
-    line: ALLOWED_HOSTS = ['*****']
-    #insertafter: '# Example: ALLOWED_HOSTS'
+    line: ALLOWED_HOSTS = ['*']
     state: present
-    #backup: yes
   become: true 
-  #tags: tes
-
+##################################################fonction simple#################################################################
+# - name: configuration - file modification
+#   become: yes
+#   replace:
+#     path: "/opt/netbox/netbox/netbox/configuration.py"
+#     regexp: "{{ item.From }}"                                       
+#     replace: "{{ item.To }}"
+#   with_items:
+#     - { From: "ALLOWED_HOSTS = \\[\\]", To: "ALLOWED_HOSTS = ['*']" }
+#     - { From: "'NAME': 'netbox', \\s+ # Database name", To: "'NAME': '{{ database }}', # Database name" }
+#     - { From: "'USER': '', \\s+ # PostgreSQL username", To: "'USER': '{{ db_user }}',  # PostgreSQL username" }
+#     - { From: "'PASSWORD': '', \\s+ # PostgreSQL password", To: "'PASSWORD': '{{ db_password }}',  # PostgreSQL password" }
+#     - { From: "SECRET_KEY = ''", To: "SECRET_KEY = '{{ netbox_secret_key }}'" }
+##################################################fonction simple#################################################################
 
 - name: configuration Database for user
   lineinfile:
     path: /opt/netbox/netbox/netbox/configuration.py
-    regexp: '(^[^$]{4}\WUSER\W)'                                                                     #\s*\s*# PostgreSQL username                 #'^\s*USER\s*'
+    regexp: '(^[^$]{4}\WUSER\W)'                                                                                      
     line: "\\1:'{{db_user}}',          # PostgreSQL username"   
-    #insertafter: '^DATABASE'
+    #insertafter: '^DATABASE'                                             
     backrefs: yes
     state: present
     firstmatch: yes
@@ -177,6 +184,162 @@
     #backup: yes
   become: true 
   #tags: tes3
+
+- name: get the key with python
+  command: "python3 generate_secret_key.py "
+  args:  
+    chdir: /opt/netbox/netbox 
+  register: keys 
+# - set_fact:
+#     string_to_echo: "{{ keys.stdout }}"
+- debug:
+    var: keys.stdout 
+    #verbosity: 2
+  become: true
+  tags: tes
+
+- name: copy the key 
+  lineinfile:
+    path: /opt/netbox/netbox/netbox/configuration.py
+    regexp: '^SECRET_KEY'                                                                            
+    line: SECRET_KEY = '{{ keys.stdout }}'                                             # "\\1:'{{key.stdout}}'"   
+    insertafter: '^# https://docs.djangoproject.com/en/stable/ref/settings/#std:setting-SECRET_KEYDATABASE'
+    #backrefs: yes
+    state: present
+    #firstmatch: yes
+    #backup: yes
+  become: true 
+  tags: tes1
+
+- name: Execute script on remote_machine
+  shell: "sh /opt/netbox/upgrade.sh"
+  args:
+    executable: /bin/bash
+  #remote_src: yes
+  become: true 
+  #tags: tes2 
+
+- name: put all in a block
+  block:
+  - name: Stay in mode venv
+    shell:  source /opt/netbox/venv/bin/activate 
+    args:
+      #chdir: /opt/netbox/venv/bin/activate 
+      executable: /bin/bash
+      #source activate
+    # args:  
+    #   chdir: /opt/netbox/venv/bin/
+    #   executable: /bin/bash
+    become: true
+    tags: tes
+
+  - name: Create superuser
+    expect:
+      command: "python3 manage.py createsuperuser "  #/op/netbox/venv/bin 
+      chdir: "/opt/netbox/netbox"
+      echo: yes 
+      responses:
+        Username:
+          - "net1"
+        #when: ansible_facts.getent_passwd[netbox1] is defined
+        Email:
+          - "madjou@test.com"
+        Password:
+          - "test"
+          - "test" 
+    ignore_errors: true   
+    tags: user 
+    become: true
+
+  - name: Create symbolic link 
+    file:
+      src: "/opt/netbox/contrib/netbox-housekeeping.sh"
+      dest: "/etc/cron.daily/netbox-housekeeping"
+      state: link
+
+  - name: Configuration Netbox with Guinicorn
+    copy:
+      src: /opt/netbox/contrib/gunicorn.py
+      dest: /opt/netbox/gunicorn.py
+      remote_src: yes
+    become: true 
+
+  - name: Copy the service
+    # command: "cp -v /opt/netbox/contrib/*.service "
+    # args:  
+    #   chdir: /etc/systemd/system/
+    copy: 
+      src: /opt/netbox/contrib/*.service
+      dest: /etc/systemd/system/
+      remote_src: yes
+    become: true
+  - name: start and enable service of netbox
+    block:
+    - name: just force systemd to reload configs 
+      systemd:
+        daemon_reload: yes
+    - name: Start and enabled service netbox, if not started
+      service:
+        name: netbox
+        state: started
+        enabled: yes
+    - name: Start and enableservice netbox-rq, if not started
+      service:
+        name: netbox-rq
+        state: started
+        enabled: yes
+    
+
+
+
+
+#################################################################################################
+
+# - name: install script
+#   block:
+
+#   - name: installation - sending "init.sh"
+#     become: yes
+#     copy:
+#       src: "files/init.sh"
+#       dest: init.sh
+#       mode: u+rwx,g+rx,o+rx
+
+#   - name: installation - running "init.sh"
+#     expect: 
+#       command: bash init.sh
+#       responses:
+#         Username:
+#             - "{{ netbox_super_user }}"
+#         Email:
+#             - "{{ netbox_super_email }}"
+#         Password:
+#             - "{{ netbox_super_password }}"
+#             - "{{ netbox_super_password }}"
+#       echo: yes
+#       timeout: 5
+#     register: superuser
+#     ignore_errors: yes
+
+#   - name: installation - superuser creation checking
+#     block:
+
+#     - name: installation - "init.sh" ok, superuser already exists
+#       set_fact:
+#         superuser: 
+#           failed: false
+#       when: "'username is already taken' in superuser.msg"
+      
+#     when: superuser.failed
+
+#   - name: installation - superuser creation failed
+#     fail:
+#       msg: "superuser creation failed !"
+#     when: superuser.failed
+
+#####################################################################################################
+
+
 
 
 # - name: Configuration of netbox
