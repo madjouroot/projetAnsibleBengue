@@ -222,10 +222,15 @@
 - name: put all in a block
   block:
   - name: Stay in mode venv
-    shell:  source /opt/netbox/venv/bin/activate 
+    shell:  source /opt/netbox/venv/bin/activate && pip -V
+    register: check_venv
     args:
       #chdir: /opt/netbox/venv/bin/activate 
       executable: /bin/bash
+    become: true
+  - debug:
+      var: check_venv.stdout 
+  
       #source activate
     # args:  
     #   chdir: /opt/netbox/venv/bin/
@@ -233,14 +238,17 @@
     become: true
     tags: tes
 
-  - name: Create superuser
+  - name: Create superuser                                                      #"python3 manage.py createsuperuser "  #/op/netbox/venv/bin 
     expect:
-      command: "python3 manage.py createsuperuser "  #/op/netbox/venv/bin 
+      command:  python3 manage.py createsuperuser 
+      #  /bin/bash -c source /opt/netbox/venv/bin/activate 
+      #  cd /opt/netbox/netbox
+      #  python3 manage. py createsuperuser
       chdir: "/opt/netbox/netbox"
       echo: yes 
       responses:
         Username:
-          - "net1"
+          - "net7"
         #when: ansible_facts.getent_passwd[netbox1] is defined
         Email:
           - "madjou@test.com"
@@ -269,25 +277,38 @@
     # args:  
     #   chdir: /etc/systemd/system/
     copy: 
-      src: /opt/netbox/contrib/*.service
-      dest: /etc/systemd/system/
+      src: "/opt/netbox/contrib/{{ item }}"
+      dest: "/etc/systemd/system/{{ item }}"
       remote_src: yes
+    with_items: 
+        - netbox.service
+        - netbox-rq.service
     become: true
-  - name: start and enable service of netbox
-    block:
-    - name: just force systemd to reload configs 
-      systemd:
-        daemon_reload: yes
-    - name: Start and enabled service netbox, if not started
-      service:
-        name: netbox
-        state: started
-        enabled: yes
-    - name: Start and enableservice netbox-rq, if not started
-      service:
-        name: netbox-rq
-        state: started
-        enabled: yes
+
+  - name: start netbox service
+    systemd:
+      state: started
+      daemon_reload: yes
+      enabled: yes
+      name: "{{ item }}"
+    with_items: 
+      - netbox
+      - netbox-rq
+    become: true
+
+  #  - name: just force systemd to reload configs 
+  #   systemd:
+  #       daemon_reload: yes
+  #   - name: Start and enabled service netbox, if not started
+  #     service:
+  #       name: netbox
+  #       state: started
+  #       enabled: yes
+  #   - name: Start and enableservice netbox-rq, if not started
+  #     service:
+  #       name: netbox-rq
+  #       state: started
+  #       enabled: yes
     
 
 
