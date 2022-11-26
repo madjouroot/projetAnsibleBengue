@@ -3,9 +3,9 @@
   pip:
     name: pexpect
 
-# - name: Install django                          
-#   pip:
-#     name: Django
+- name: Install django                          
+  pip:
+    name: django
 
 - name: Check if python is installed
   command: "python3 -V"
@@ -134,103 +134,16 @@
   become: true 
   tags: tes1
 
-- name: Execute script on remote_machine
-  shell: "sh /opt/netbox/upgrade.sh"
-  args:
-    executable: /bin/bash
-  #remote_src: yes
-  become: true 
-  #tags: tes2 
+# - name: Execute script on remote_machine
+#   shell: "sh /opt/netbox/upgrade.sh"
+#   args:
+#     executable: /bin/bash
+#   #remote_src: yes
+#   become: true 
+#   #tags: tes2 
 
-- name: put all in a block
-  block:
-  - name: installation - sending "init.sh"
-    become: true
-    copy:
-      src: "files/init.sh"
-      dest: init.sh
-      mode: u+rwx,g+rx,o+rx
-
-  # - name: Stay in mode venv
-  #   shell:  source /opt/netbox/venv/bin/activate && pip -V
-  #   register: check_venv
-  #   args:
-  #     executable: /bin/bash
-  #   become: true
-  # - debug:
-  #     var: check_venv.stdout 
-  #   become: true
-  #   tags: tes
-
-  - name: Create superuser wit bash file                                                    #"python3 manage.py createsuperuser "  #/op/netbox/venv/bin 
-    expect:
-      command: bash init.sh
-      #chdir: "/opt/netbox/netbox"
-      #command:  python3 manage.py createsuperuser  
-      responses:
-        Username:
-          - "net2"
-        Email:
-          - "madjou@test.com"
-        Password:
-          - "net1"
-          - "net1" 
-      timeout: 5
-      echo: yes
-    ignore_errors: true   
-    become: true
-
-  - name: Create symbolic link 
-    file:
-      src: "/opt/netbox/contrib/netbox-housekeeping.sh"
-      dest: "/etc/cron.daily/netbox-housekeeping"
-      state: link
-
-  - name: Configuration Netbox with Guinicorn
-    copy:
-      src: /opt/netbox/contrib/gunicorn.py
-      dest: /opt/netbox/gunicorn.py
-      remote_src: yes
-    become: true 
-
-  - name: Copy the service
-    copy: 
-      src: "/opt/netbox/contrib/{{ item }}"
-      dest: "/etc/systemd/system/{{ item }}"
-      remote_src: yes
-    with_items: 
-        - netbox.service
-        - netbox-rq.service
-    become: true
-
-  - name: reload netbox service
-    systemd:
-      daemon_reload: yes
-      name: "{{ item }}"
-    with_items: 
-      - netbox
-      - netbox-rq
-    become: true
-
-  - name: Start netbox service 
-    service: 
-      name: "{{ item }}"
-      state: started
-      enabled: yes
-    with_items: 
-      - netbox
-      - netbox-rq
-    become: true
-
-
-
-
-
-#################################################################################################
-
-# - name: install script
+# - name: put all in a block
 #   block:
-
 #   - name: installation - sending "init.sh"
 #     become: true
 #     copy:
@@ -238,38 +151,34 @@
 #       dest: init.sh
 #       mode: u+rwx,g+rx,o+rx
 
-#   - name: installation - running "init.sh"
-#     expect: 
-#       command:  bash init.sh
+#   # - name: Stay in mode venv
+#   #   shell:  source /opt/netbox/venv/bin/activate && pip -V
+#   #   register: check_venv
+#   #   args:
+#   #     executable: /bin/bash
+#   #   become: true
+#   # - debug:
+#   #     var: check_venv.stdout 
+#   #   become: true
+#   #   tags: tes
+
+#   - name: Create superuser wit bash file                                                    #"python3 manage.py createsuperuser "  #/op/netbox/venv/bin 
+#     expect:
+#       command: bash init.sh
+#       #chdir: "/opt/netbox/netbox"
+#       #command:  python3 manage.py createsuperuser  
 #       responses:
 #         Username:
-#             - "{{ netbox_super_user }}"
+#           - "net2"
 #         Email:
-#             - "{{ netbox_super_email }}"
+#           - "madjou@test.com"
 #         Password:
-#             - "{{ netbox_super_password }}"
-#             - "{{ netbox_super_password }}" 
-#       echo: yes
+#           - "net1"
+#           - "net1" 
 #       timeout: 5
-#     register: superuser
-#     ignore_errors: true
-
-#   - name: installation - superuser creation checking
-#     block:
-
-#     - name: installation - "init.sh" ok, superuser already exists
-#       set_fact:
-#         superuser: 
-#           failed: false
-#       when: "'username is already taken' in superuser.msg"
-      
-#     when: superuser.failed
-
-#   - name: installation - superuser creation failed
-#     fail:
-#       msg: "superuser creation failed !"
-#     when: superuser.failed
-#   #tags: user1 
+#       echo: yes
+#     ignore_errors: true   
+#     become: true
 
 #   - name: Create symbolic link 
 #     file:
@@ -285,9 +194,6 @@
 #     become: true 
 
 #   - name: Copy the service
-#     # command: "cp -v /opt/netbox/contrib/*.service "
-#     # args:  
-#     #   chdir: /etc/systemd/system/
 #     copy: 
 #       src: "/opt/netbox/contrib/{{ item }}"
 #       dest: "/etc/systemd/system/{{ item }}"
@@ -315,6 +221,110 @@
 #       - netbox
 #       - netbox-rq
 #     become: true
+
+
+
+
+
+#################################################################################################
+
+- name: install script
+  block:
+
+  - name: installation - sending "init.sh"
+    become: true
+    copy:
+      src: "files/init.sh"
+      dest: init.sh
+      mode: u+rwx,g+rx,o+rx
+
+  - name: installation - running "init.sh"
+    expect: 
+      command:  bash init.sh
+      responses:
+        Username:
+            - "{{ netbox_super_user }}"
+        Email:
+            - "{{ netbox_super_email }}"
+        Password:
+            - "{{ netbox_super_password }}"
+            - "{{ netbox_super_password }}" 
+      echo: yes
+      timeout: 5
+    register: superuser
+    ignore_errors: true
+
+  # - name: installation - superuser creation checking
+  #   block:
+
+  #   - name: installation - "init.sh" ok, superuser already exists
+  #     set_fact:
+  #       superuser: 
+  #         failed: false
+  #     when: "'username is already taken' in superuser.msg"
+      
+  #   when: superuser.failed
+
+  # - name: installation - superuser creation failed
+  #   fail:
+  #     msg: "superuser creation failed !"
+  #   when: superuser.failed
+  #tags: user1 
+
+  - name: Create symbolic link 
+    file:
+      src: "/opt/netbox/contrib/netbox-housekeeping.sh"
+      dest: "/etc/cron.daily/netbox-housekeeping"
+      state: link
+
+  - name: Configuration Netbox with Guinicorn
+    copy:
+      src: /opt/netbox/contrib/gunicorn.py
+      dest: /opt/netbox/gunicorn.py
+      remote_src: yes
+    become: true 
+
+  - name: Copy the service
+    # command: "cp -v /opt/netbox/contrib/*.service "
+    # args:  
+    #   chdir: /etc/systemd/system/
+    copy: 
+      src: "/opt/netbox/contrib/{{ item }}"
+      dest: "/etc/systemd/system/{{ item }}"
+      remote_src: yes
+    with_items: 
+        - netbox.service
+        - netbox-rq.service
+    become: true
+  
+  # - name: reload netbox service
+  #   systemd:
+  #     daemon_reload: yes
+  #     #name: "{{ item }}"
+  #   # with_items: 
+  #   #   - netbox
+  #   #   - netbox-rq
+  #   become: true
+  - name: daemon_reload_sytem
+    become: true
+    command: systemctl daemon-reload
+
+
+  - name: Start netbox service 
+    become: true
+    command: systemctl start netbox.service netbox-rq.service #&& systemctl enable  netbox.service netbox-rq.service
+  
+    # systemd: 
+    #   name: "{{ item }}"
+    #   state: started
+    #   enabled: yes
+    # with_items: 
+    #   - netbox
+    #   - netbox-rq
+  - name: anable netbox service
+    become: true
+    command: systemctl enable  netbox.service netbox-rq.service
+    
   
 
 #####################################################################################################
