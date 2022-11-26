@@ -1,0 +1,19 @@
+---
+# tasks file for redis
+- name: install Redis
+  package:  
+    name: redis-server
+    update_cache: true 
+    state: latest
+
+- name: Check the version of installed Redis and the service status
+  command: "redis-server -v"
+  register: RedisVersion  
+- debug:
+    var: RedisVersion.stdout
+
+- name:  the service status of Redis 
+  command: "redis-cli ping"
+  register: VerifyServiceStatus  
+- debug:
+    var: VerifyServiceStatus.stdout

@@ -1,102 +1,11 @@
 ---
-# tasks file for deployNetbox
-- name: install postgreSQL
-  package:  
-    name: "{{ item }}" 
-    update_cache: true 
-    state: latest
-  when: ansible_distribution== "Ubuntu"
-  loop:
-    - acl
-    - postgresql
-    - postgresql-contrib
-    - libpq-dev
-    - python3-psycopg2
-
-- name: Ensure the PostgreSQL service is running
-  service: name=postgresql state=started enabled=yes
-
-- name: Check the version of installed postgres
-  register: psqlVersion 
-  command: "psql -V" 
-- debug:
-    var: psqlVersion.stdout
-
-- name: Create the database
-  become: true
-  become_user: postgres
-  postgresql_db: 
-    name: "{{ db_name }}" 
-    template: template0
-    state: present
-
-- name: Create postgres user for my app
-  become: true
-  become_user: postgres
-  postgresql_user:
-    name: "{{db_user}}"
-    password: "{{db_password}}"
-    state: present
-
-- name: GRANT ALL PRIVILEGES ON DATABASE netbox TO netbox
-  become: true
-  become_user: postgres
-  postgresql_privs:
-    db: "{{ db_name }}"
-    type: database
-    role: "{{db_user}}"
-    privs: ALL
-
-- name: Ensure user has access to the new database
-  become: true
-  become_user: postgres
-  postgresql_user: 
-    db: "{{ db_name }}" 
-    name: "{{db_user}}"  
-    password: "{{db_password}}" 
-    priv: ALL 
-    state: present
-
-- name: install Redis
-  package:  
-    name: redis-server
-    update_cache: true 
-    state: latest
-
-- name: Check the version of installed Redis and the service status
-  command: "redis-server -v"
-  register: RedisVersion  
-- debug:
-    var: RedisVersion.stdout
-
-- name:  the service status of Redis 
-  command: "redis-cli ping"
-  register: VerifyServiceStatus  
-- debug:
-    var: VerifyServiceStatus.stdout
-
-- name: install of Netbox
-  package:  
-    name: "{{ item }}" 
-    update_cache: true 
-    state: latest
-  when: ansible_distribution== "Ubuntu"
-  loop:
-    - python3
-    - python3-pip
-    - python3-venv
-    - python3-dev
-    - build-essential
-    - libxml2-dev 
-    - libxslt1-dev 
-    - libffi-dev 
-    - libpq-dev 
-    - libssl-dev 
-    - zlib1g-dev
-
-- name: Install pexpect
+- name: Install pexpect                           
   pip:
-   name: pexpect
+    name: pexpect
+
+# - name: Install django                          
+#   pip:
+#     name: Django
 
 - name: Check if python is installed
   command: "python3 -V"
@@ -111,24 +20,38 @@
   become: true 
   
 - name: clone Netbox
+  become: true
   git:
     repo: 'https://github.com/netbox-community/netbox.git'
     dest: /opt/netbox/
-    force: yes 
+    version: "{{ VERSION }}"
+    #force: yes 
 
 - name: Create a Group
+  become: true
   group:
     name: netbox
     state: present
 
 - name: Assign the netbox user to the group netbox
+  become: true
   user:
     name: netbox
     group: netbox
+    system: yes 
 
-- name: Changing ownership
-  command: "chown -R netbox /opt/netbox/netbox/media/" 
-  become: true 
+#- name: Changing ownership
+#  command: "chown -R netbox /opt/netbox/netbox/media/" 
+#  become: true
+
+- name: prerequisites - group rights management for netbox
+  become: true
+  file:
+    path: /opt/netbox/netbox/media/
+    state: directory
+    recurse: yes
+    group: netbox
+
 
 - name: copy file
   copy:
@@ -221,42 +144,40 @@
 
 - name: put all in a block
   block:
-  - name: Stay in mode venv
-    shell:  source /opt/netbox/venv/bin/activate && pip -V
-    register: check_venv
-    args:
-      #chdir: /opt/netbox/venv/bin/activate 
-      executable: /bin/bash
+  - name: installation - sending "init.sh"
     become: true
-  - debug:
-      var: check_venv.stdout 
-  
-      #source activate
-    # args:  
-    #   chdir: /opt/netbox/venv/bin/
-    #   executable: /bin/bash
-    become: true
-    tags: tes
+    copy:
+      src: "files/init.sh"
+      dest: init.sh
+      mode: u+rwx,g+rx,o+rx
 
-  - name: Create superuser                                                      #"python3 manage.py createsuperuser "  #/op/netbox/venv/bin 
+  # - name: Stay in mode venv
+  #   shell:  source /opt/netbox/venv/bin/activate && pip -V
+  #   register: check_venv
+  #   args:
+  #     executable: /bin/bash
+  #   become: true
+  # - debug:
+  #     var: check_venv.stdout 
+  #   become: true
+  #   tags: tes
+
+  - name: Create superuser wit bash file                                                    #"python3 manage.py createsuperuser "  #/op/netbox/venv/bin 
     expect:
-      command:  python3 manage.py createsuperuser 
-      #  /bin/bash -c source /opt/netbox/venv/bin/activate 
-      #  cd /opt/netbox/netbox
-      #  python3 manage. py createsuperuser
-      chdir: "/opt/netbox/netbox"
-      echo: yes 
+      command: bash init.sh
+      #chdir: "/opt/netbox/netbox"
+      #command:  python3 manage.py createsuperuser  
       responses:
         Username:
-          - "net7"
-        #when: ansible_facts.getent_passwd[netbox1] is defined
+          - "net2"
         Email:
           - "madjou@test.com"
         Password:
-          - "test"
-          - "test" 
+          - "net1"
+          - "net1" 
+      timeout: 5
+      echo: yes
     ignore_errors: true   
-    tags: user 
     become: true
 
   - name: Create symbolic link 
@@ -273,9 +194,6 @@
     become: true 
 
   - name: Copy the service
-    # command: "cp -v /opt/netbox/contrib/*.service "
-    # args:  
-    #   chdir: /etc/systemd/system/
     copy: 
       src: "/opt/netbox/contrib/{{ item }}"
       dest: "/etc/systemd/system/{{ item }}"
@@ -285,31 +203,25 @@
         - netbox-rq.service
     become: true
 
-  - name: start netbox service
+  - name: reload netbox service
     systemd:
-      state: started
       daemon_reload: yes
-      enabled: yes
       name: "{{ item }}"
     with_items: 
       - netbox
       - netbox-rq
     become: true
 
-  #  - name: just force systemd to reload configs 
-  #   systemd:
-  #       daemon_reload: yes
-  #   - name: Start and enabled service netbox, if not started
-  #     service:
-  #       name: netbox
-  #       state: started
-  #       enabled: yes
-  #   - name: Start and enableservice netbox-rq, if not started
-  #     service:
-  #       name: netbox-rq
-  #       state: started
-  #       enabled: yes
-    
+  - name: Start netbox service 
+    service: 
+      name: "{{ item }}"
+      state: started
+      enabled: yes
+    with_items: 
+      - netbox
+      - netbox-rq
+    become: true
+
 
 
 
@@ -320,7 +232,7 @@
 #   block:
 
 #   - name: installation - sending "init.sh"
-#     become: yes
+#     become: true
 #     copy:
 #       src: "files/init.sh"
 #       dest: init.sh
@@ -328,7 +240,7 @@
 
 #   - name: installation - running "init.sh"
 #     expect: 
-#       command: bash init.sh
+#       command:  bash init.sh
 #       responses:
 #         Username:
 #             - "{{ netbox_super_user }}"
@@ -336,11 +248,11 @@
 #             - "{{ netbox_super_email }}"
 #         Password:
 #             - "{{ netbox_super_password }}"
-#             - "{{ netbox_super_password }}"
+#             - "{{ netbox_super_password }}" 
 #       echo: yes
 #       timeout: 5
 #     register: superuser
-#     ignore_errors: yes
+#     ignore_errors: true
 
 #   - name: installation - superuser creation checking
 #     block:
@@ -357,6 +269,53 @@
 #     fail:
 #       msg: "superuser creation failed !"
 #     when: superuser.failed
+#   #tags: user1 
+
+#   - name: Create symbolic link 
+#     file:
+#       src: "/opt/netbox/contrib/netbox-housekeeping.sh"
+#       dest: "/etc/cron.daily/netbox-housekeeping"
+#       state: link
+
+#   - name: Configuration Netbox with Guinicorn
+#     copy:
+#       src: /opt/netbox/contrib/gunicorn.py
+#       dest: /opt/netbox/gunicorn.py
+#       remote_src: yes
+#     become: true 
+
+#   - name: Copy the service
+#     # command: "cp -v /opt/netbox/contrib/*.service "
+#     # args:  
+#     #   chdir: /etc/systemd/system/
+#     copy: 
+#       src: "/opt/netbox/contrib/{{ item }}"
+#       dest: "/etc/systemd/system/{{ item }}"
+#       remote_src: yes
+#     with_items: 
+#         - netbox.service
+#         - netbox-rq.service
+#     become: true
+
+#   - name: reload netbox service
+#     systemd:
+#       daemon_reload: yes
+#       name: "{{ item }}"
+#     with_items: 
+#       - netbox
+#       - netbox-rq
+#     become: true
+
+#   - name: Start netbox service 
+#     service: 
+#       name: "{{ item }}"
+#       state: started
+#       enabled: yes
+#     with_items: 
+#       - netbox
+#       - netbox-rq
+#     become: true
+  
 
 #####################################################################################################
 

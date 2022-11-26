@@ -3,12 +3,26 @@
   hosts: prodNetbox
   gather_facts: true
   become: true  
+  
   vars:
     ansible_python_interpreter: /usr/bin/python3
     db_user: netbox
     db_name: netbox
     db_password: 'J5brHrAXFLQSif0K'
+    VERSION: 'v3.3.6' 
+    netbox_super_user: netbox
+    netbox_super_email: netbox@netbox.com
+    netbox_super_password: netbox1
     #allow_world_readable_tmpfiles: true
     #ansible_sudo_pass: vagrant	
   roles:
-   - role: deployNetbox
+    
+    - install/packages
+    - install/postgresql
+    - install/redis
+    - install/deployNetbox
+    
+  #  - role: packages
+  #  - role: postgresql
+  #  - role: redis
+   

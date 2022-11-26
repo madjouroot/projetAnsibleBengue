@@ -4,8 +4,9 @@ ansible_python_interpreter=/usr/bin/python3
 
 
 [prodNetbox]
-client1 ansible_host=172.10.20.31
+client1 ansible_host=192.168.99.11
+#client2 ansible_host=192.168.99.12
 
-[prodLibre]
-client2 ansible_host=172.10.20.32
+# [prodLibre]
+# client2 ansible_host=172.10.20.32
 

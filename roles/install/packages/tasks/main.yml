@@ -1,0 +1,13 @@
+---
+
+# tasks file for packages
+- name: update_system
+  package:  
+    update_cache: true 
+    
+# tasks file for packages
+- name: install_packages_ubuntu
+  package:  
+    name: "{{ ubuntu_packages }}" 
+    state: present
+  when: ansible_distribution == 'Ubuntu'
