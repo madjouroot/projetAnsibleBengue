@@ -21,6 +21,7 @@
     - install/postgresql
     - install/redis
     - install/deployNetbox
+    - install/guinicorn
     
   #  - role: packages
   #  - role: postgresql

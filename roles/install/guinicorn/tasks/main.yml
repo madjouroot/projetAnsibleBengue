@@ -1,0 +1,53 @@
+---
+# tasks file for guinicorn
+
+- name: Configuration Netbox with Guinicorn
+  copy:
+    src: /opt/netbox/contrib/gunicorn.py
+    dest: /opt/netbox/gunicorn.py
+    remote_src: yes
+    #become: true 
+
+- name: Copy the service
+    # command: "cp -v /opt/netbox/contrib/*.service "
+    # args:  
+    #   chdir: /etc/systemd/system/
+  copy: 
+      src: "/opt/netbox/contrib/{{ item }}"
+      dest: "/etc/systemd/system/{{ item }}"
+      remote_src: yes
+  with_items: 
+        - netbox.service
+        - netbox-rq.service
+        #become: true
+  
+- name: reload netbox service
+    #become: true
+  systemd:
+      daemon_reload: yes
+      scope: system
+        #     #name: "{{ item }}"
+  #   # with_items: 
+  #   #   - netbox
+  #   #   - netbox-rq
+  #   become: true
+  # - name: daemon_reload_sytem
+  #   become: true
+  #   command: systemctl daemon-reload
+
+
+  # - name: Start netbox service 
+  #   become: true
+  #   command: systemctl start netbox.service netbox-rq.service #&& systemctl enable  netbox.service netbox-rq.service
+- name: Start netbox service 
+  systemd: 
+    name: "{{ item }}"
+    state: started
+    enabled: yes 
+  with_items: 
+    - netbox
+    - netbox-rq
+  # - name: anable netbox service
+  #   become: true
+  #   command: systemctl enable  netbox.service netbox-rq.service
+    

@@ -17,10 +17,10 @@
   file:
     path: /opt/netbox
     state: directory
-  become: true 
+  #become: true 
   
 - name: clone Netbox
-  become: true
+  #become: true
   git:
     repo: 'https://github.com/netbox-community/netbox.git'
     dest: /opt/netbox/
@@ -34,7 +34,7 @@
     state: present
 
 - name: Assign the netbox user to the group netbox
-  become: true
+  #become: true
   user:
     name: netbox
     group: netbox
@@ -45,7 +45,7 @@
 #  become: true
 
 - name: prerequisites - group rights management for netbox
-  become: true
+  #become: true
   file:
     path: /opt/netbox/netbox/media/
     state: directory
@@ -58,7 +58,7 @@
     src: /opt/netbox/netbox/netbox/configuration_example.py
     dest: /opt/netbox/netbox/netbox/configuration.py
     remote_src: yes
-  become: true 
+  #become: true 
   
 - name: configuration file
   lineinfile:
@@ -66,7 +66,7 @@
     regexp: '^ALLOWED_HOSTS'
     line: ALLOWED_HOSTS = ['*']
     state: present
-  become: true 
+  #become: true 
 ##################################################fonction simple#################################################################
 # - name: configuration - file modification
 #   become: yes
@@ -92,7 +92,7 @@
     state: present
     firstmatch: yes
     #backup: yes
-  become: true 
+  #become: true 
   #tags: tes2
   
 - name: configuration Database for password 
@@ -105,7 +105,7 @@
     state: present
     firstmatch: yes
     #backup: yes
-  become: true 
+  #become: true 
   #tags: tes3
 
 - name: get the key with python
@@ -118,7 +118,7 @@
 - debug:
     var: keys.stdout 
     #verbosity: 2
-  become: true
+  #become: true
   tags: tes
 
 - name: copy the key 
@@ -131,16 +131,16 @@
     state: present
     #firstmatch: yes
     #backup: yes
-  become: true 
+  #become: true 
   tags: tes1
 
-# - name: Execute script on remote_machine
-#   shell: "sh /opt/netbox/upgrade.sh"
-#   args:
-#     executable: /bin/bash
-#   #remote_src: yes
-#   become: true 
-#   #tags: tes2 
+- name: Execute script on remote_machine
+  shell: "sh /opt/netbox/upgrade.sh"
+  args:
+    executable: /bin/bash
+  #remote_src: yes
+  #become: true 
+  #tags: tes2 
 
 # - name: put all in a block
 #   block:
@@ -232,7 +232,7 @@
   block:
 
   - name: installation - sending "init.sh"
-    become: true
+    #become: true
     copy:
       src: "files/init.sh"
       dest: init.sh
@@ -282,7 +282,7 @@
       src: /opt/netbox/contrib/gunicorn.py
       dest: /opt/netbox/gunicorn.py
       remote_src: yes
-    become: true 
+    #become: true 
 
   - name: Copy the service
     # command: "cp -v /opt/netbox/contrib/*.service "
@@ -295,35 +295,37 @@
     with_items: 
         - netbox.service
         - netbox-rq.service
-    become: true
+    #become: true
   
-  # - name: reload netbox service
-  #   systemd:
-  #     daemon_reload: yes
+  - name: reload netbox service
+    #become: true
+    systemd:
+      daemon_reload: yes
+      scope: system
   #     #name: "{{ item }}"
   #   # with_items: 
   #   #   - netbox
   #   #   - netbox-rq
   #   become: true
-  - name: daemon_reload_sytem
-    become: true
-    command: systemctl daemon-reload
+  # - name: daemon_reload_sytem
+  #   become: true
+  #   command: systemctl daemon-reload
 
 
+  # - name: Start netbox service 
+  #   become: true
+  #   command: systemctl start netbox.service netbox-rq.service #&& systemctl enable  netbox.service netbox-rq.service
   - name: Start netbox service 
-    become: true
-    command: systemctl start netbox.service netbox-rq.service #&& systemctl enable  netbox.service netbox-rq.service
-  
-    # systemd: 
-    #   name: "{{ item }}"
-    #   state: started
-    #   enabled: yes
-    # with_items: 
-    #   - netbox
-    #   - netbox-rq
-  - name: anable netbox service
-    become: true
-    command: systemctl enable  netbox.service netbox-rq.service
+    systemd: 
+      name: "{{ item }}"
+      state: started
+      enabled: yes 
+    with_items: 
+      - netbox
+      - netbox-rq
+  # - name: anable netbox service
+  #   become: true
+  #   command: systemctl enable  netbox.service netbox-rq.service
     
   
 

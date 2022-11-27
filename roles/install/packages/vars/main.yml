@@ -15,4 +15,5 @@ ubuntu_packages:
   - libpq-dev 
   - libssl-dev 
   - zlib1g-dev
+  - redis-server
  

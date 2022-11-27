@@ -1,18 +1,11 @@
 ---
-# tasks file for postgresql
-# - name: update_system_and_install_packages_postgres
-#   package:  
-#     name: "{{ ubuntu_packages }}" 
-#     update_cache: true 
-#     state: latest
-#   when: ansible_distribution == 'ubuntu'
 
 - name: Ensure the PostgreSQL service is running
   service: 
     name: postgresql
     state: started
     enabled: yes
-  become: true
+  #become: true
 
 - name: Check the version of installed postgres
   register: psqlVersion 
@@ -21,7 +14,7 @@
     var: psqlVersion.stdout
 
 - name: Create the database
-  become: true
+  #become: true
   become_user: postgres
   postgresql_db: 
     name: "{{ db_name }}" 
@@ -29,7 +22,7 @@
     state: present
 
 - name: Create postgres user for my app
-  become: true
+  #become: true
   become_user: postgres
   postgresql_user:
     name: "{{db_user}}"
@@ -37,7 +30,7 @@
     state: present
 
 - name: GRANT ALL PRIVILEGES ON DATABASE netbox TO netbox
-  become: true
+  #become: true
   become_user: postgres
   postgresql_privs:
     db: "{{ db_name }}"
@@ -46,7 +39,7 @@
     privs: ALL
 
 - name: Ensure user has access to the new database
-  become: true
+  #become: true
   become_user: postgres
   postgresql_user: 
     db: "{{ db_name }}" 
