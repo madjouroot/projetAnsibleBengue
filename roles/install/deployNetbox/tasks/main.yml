@@ -17,10 +17,11 @@
   file:
     path: /opt/netbox
     state: directory
+    mode: '0755'
   #become: true 
   
 - name: clone Netbox
-  #become: true
+  become: true
   git:
     repo: 'https://github.com/netbox-community/netbox.git'
     dest: /opt/netbox/
@@ -32,13 +33,14 @@
   group:
     name: netbox
     state: present
+    system: yes 
 
 - name: Assign the netbox user to the group netbox
   #become: true
   user:
     name: netbox
     group: netbox
-    system: yes 
+    #system: yes 
 
 #- name: Changing ownership
 #  command: "chown -R netbox /opt/netbox/netbox/media/" 
@@ -138,6 +140,11 @@
   shell: "sh /opt/netbox/upgrade.sh"
   args:
     executable: /bin/bash
+
+# - name: installation - running "upgrade.sh"
+#   become: true
+#   shell: |
+#     /opt/netbox/upgrade.sh
   #remote_src: yes
   #become: true 
   #tags: tes2 
