@@ -11,3 +11,7 @@
     name: "{{ ubuntu_packages }}" 
     state: present
   when: ansible_distribution == 'Ubuntu'
+
+- name: Install pexpect                           
+  pip:
+    name: pexpect

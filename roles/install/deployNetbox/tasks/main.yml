@@ -1,11 +1,7 @@
 ---
-- name: Install pexpect                           
-  pip:
-    name: pexpect
-
-- name: Install django                          
-  pip:
-    name: django
+# - name: Install django                          
+#   pip:
+#     name: django
 
 - name: Check if python is installed
   command: "python3 -V"
@@ -136,15 +132,15 @@
   #become: true 
   tags: tes1
 
-- name: Execute script on remote_machine
-  shell: "sh /opt/netbox/upgrade.sh"
-  args:
-    executable: /bin/bash
+# - name: Execute script on remote_machine
+#   shell: "sh /opt/netbox/upgrade.sh"
+#   args:
+#     executable: /bin/bash
 
-# - name: installation - running "upgrade.sh"
-#   become: true
-#   shell: |
-#     /opt/netbox/upgrade.sh
+- name: installation - running "upgrade.sh"
+  become: true
+  shell: |
+    /opt/netbox/upgrade.sh
   #remote_src: yes
   #become: true 
   #tags: tes2 
@@ -333,6 +329,23 @@
   # - name: anable netbox service
   #   become: true
   #   command: systemctl enable  netbox.service netbox-rq.service
+
+  # - name: "Generate a certificate"
+  #   shell: "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout /etc/ssl/private/netbox.key -out /etc/ssl/certs/netbox.crt"
+  #   args:
+  #     executable: /bin/bash
+  #   tags: cert
+  #   expect: 
+  #     responses:
+  #       Country Name:
+  #           - FR
+  #       Email:
+  #           - "{{ netbox_super_email }}"
+  #       Password:
+  #           - "{{ netbox_super_password }}"
+  #           - "{{ netbox_super_password }}" 
+  #     echo: yes
+  #     timeout: 5
     
   
 
